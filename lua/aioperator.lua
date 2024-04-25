@@ -57,10 +57,10 @@ local function create_response_writer(opts)
 end
 
 --  Operatorfunc that follows the instructions to transform and replace text objects.
-function M.aioperator_opfunc(type)
+function M.opfunc(type)
 	if not type or type == '' then
 		---@diagnostic disable-next-line: redundant-parameter
-		vim.api.nvim_set_option_value('operatorfunc', "v:lua.aioperator_opfunc", {})
+		vim.api.nvim_set_option_value('operatorfunc', M.opfunc, {})
 		return 'g@'
 	elseif type == "block" then
 		vim.notify("Block selection is not supported.", vim.log.levels.ERROR, { title = "AI Operator" })
