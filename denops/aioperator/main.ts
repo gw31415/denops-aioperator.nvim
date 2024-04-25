@@ -1,4 +1,4 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatOpenAI } from "npm:@langchain/openai";
 import { convert } from "./converter.ts";
 import { Denops } from "https://deno.land/x/denops_std@v5.1.0/mod.ts";
 import { isString } from "https://deno.land/x/unknownutil@v3.10.0/mod.ts#^.ts";

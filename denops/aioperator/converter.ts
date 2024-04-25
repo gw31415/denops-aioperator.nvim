@@ -1,8 +1,8 @@
-import { z } from "zod";
+import { z } from "npm:zod";
 import { zodToJsonSchema } from "npm:zod-to-json-schema";
-import { ChatOpenAI, ChatOpenAICallOptions } from "@langchain/openai";
-import { JsonOutputFunctionsParser } from "langchain/output_parsers";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI, ChatOpenAICallOptions } from "npm:@langchain/openai";
+import { JsonOutputFunctionsParser } from "npm:langchain/output_parsers";
+import { ChatPromptTemplate } from "npm:@langchain/core/prompts";
 
 /**
  * Convert text according to a given order.

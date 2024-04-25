@@ -1,5 +1,2 @@
 [tools]
 deno = "latest"
-
-[env.'_']
-file = "./.env"

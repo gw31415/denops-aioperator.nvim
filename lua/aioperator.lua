@@ -1,5 +1,3 @@
-local M = {}
-
 -- Create a response_writer for the current buffer window
 local function create_response_writer(opts)
 	-- Setup options
@@ -28,13 +26,13 @@ local function create_response_writer(opts)
 	vim.api.nvim_buf_set_lines(bufnr, line_start, line_start, true, {})
 
 	-- Store entire response: initial value is the string that was initially to the right of the cursor
-	local response = left_hand_side
 	return function(replacement)
 		-- Changed to modifiable
 		vim.api.nvim_set_option_value('modifiable', true, { buf = bufnr })
 
 		-- Delete the currently written response
-		local num_lines = #(vim.split(response, "\n", {}))
+		local writing = left_hand_side .. replacement
+		local num_lines = #(vim.split(writing, "\n", {}))
 		vim.api.nvim_buf_call(bufnr, vim.cmd.undojoin)
 		vim.api.nvim_buf_set_lines(bufnr, line_start, line_start + num_lines, false, {})
 
@@ -42,7 +40,7 @@ local function create_response_writer(opts)
 		line_start = vim.api.nvim_buf_get_extmark_by_id(bufnr, nsnum, extmarkid, {})[1]
 
 		-- Write out the latest
-		local lines = vim.split(replacement .. right_hand_side, "\n", {})
+		local lines = vim.split(writing .. right_hand_side, "\n", {})
 		vim.api.nvim_buf_call(bufnr, vim.cmd.undojoin)
 		vim.api.nvim_buf_set_lines(bufnr, line_start, line_start, false, lines)
 
@@ -57,10 +55,9 @@ local function create_response_writer(opts)
 end
 
 --  Operatorfunc that follows the instructions to transform and replace text objects.
-function M.opfunc(type)
+function _G._aioperator_opfunc(type)
 	if not type or type == '' then
-		---@diagnostic disable-next-line: redundant-parameter
-		vim.api.nvim_set_option_value('operatorfunc', M.opfunc, {})
+		vim.api.nvim_set_option_value('operatorfunc', 'v:lua._aioperator_opfunc', {})
 		return 'g@'
 	elseif type == "block" then
 		vim.notify("Block selection is not supported.", vim.log.levels.ERROR, { title = "AI Operator" })
@@ -118,17 +115,23 @@ function M.opfunc(type)
 
 	local opts = vim.api.nvim_get_var('aioperator_opts')
 
+	local ma = vim.api.nvim_get_option_value('modifiable', {})
 	local responseWriterId = vim.fn["denops#callback#register"](create_response_writer(opts))
 
-	vim.fn["denops#request"]('aioperator', 'start', {
+	local function finally()
+		vim.api.nvim_set_option_value('modifiable', ma, {})
+		vim.api.nvim_set_option_value('ve', ve, {})
+		vim.fn['denops#callback#unregister'](responseWriterId)
+	end
+
+	vim.fn["denops#request_async"]('aioperator', 'start', {
 		order,
 		source,
 		opts.openai or {},
 		responseWriterId,
-	})
-
-	vim.api.nvim_set_option_value('ve', ve, {})
-	vim.fn['denops#callback#unregister'](responseWriterId)
+	}, finally, finally)
 end
 
-return M
+return {
+	opfunc = _G._aioperator_opfunc,
+}
