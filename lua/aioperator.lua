@@ -124,12 +124,18 @@ function _G._aioperator_opfunc(type)
 		vim.fn['denops#callback#unregister'](responseWriterId)
 	end
 
+	-- Set nomodifiable
+	vim.api.nvim_set_option_value('modifiable', false, {})
+
 	vim.fn["denops#request_async"]('aioperator', 'start', {
 		order,
 		source,
 		opts.openai or {},
 		responseWriterId,
-	}, finally, finally)
+	}, finally, function(e)
+		vim.notify(e.message, vim.log.levels.ERROR, { title = e.proto })
+		finally()
+	end)
 end
 
 return {
