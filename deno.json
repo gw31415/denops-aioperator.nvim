@@ -1,0 +1,15 @@
+{
+  "imports": {
+    "@langchain/core": "npm:@langchain/core@^0.1.60",
+    "@langchain/openai": "npm:@langchain/openai@^0.0.28",
+    "langchain": "npm:langchain@^0.1.36",
+    "zod": "npm:zod@^3.23.4",
+    "zod-to-json-schema": "npm:zod-to-json-schema@^3.23.0"
+  },
+  "fmt": {
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false,
+    "useTabs": false
+  }
+}
