@@ -2,11 +2,11 @@
   "version": "3",
   "packages": {
     "specifiers": {
-      "npm:@langchain/core@^0.1.60": "npm:@langchain/core@0.1.60_zod@3.23.4",
-      "npm:@langchain/openai@^0.0.28": "npm:@langchain/openai@0.0.28_zod@3.23.4",
-      "npm:langchain@^0.1.36": "npm:langchain@0.1.36_zod@3.23.4",
-      "npm:zod-to-json-schema": "npm:zod-to-json-schema@3.23.0_zod@3.23.4",
-      "npm:zod@^3.23.4": "npm:zod@3.23.4"
+      "npm:@langchain/core": "npm:@langchain/core@0.1.60_zod@3.23.4",
+      "npm:@langchain/openai": "npm:@langchain/openai@0.0.28_zod@3.23.4",
+      "npm:langchain": "npm:langchain@0.1.36_zod@3.23.4",
+      "npm:zod": "npm:zod@3.23.4",
+      "npm:zod-to-json-schema": "npm:zod-to-json-schema@3.23.0_zod@3.23.4"
     },
     "npm": {
       "@anthropic-ai/sdk@0.9.1": {
@@ -445,14 +445,5 @@
     "https://deno.land/x/unknownutil@v3.10.0/is.ts": "957784493b678a8905728c0998577443db3c66b4c8f9eaad56e6dc97167d2d0d",
     "https://deno.land/x/unknownutil@v3.10.0/mod.ts#^.ts": "50f0bdb70664c65b2954d4b9bb0f95f9bb4c77c4469331fda2475a4ffbb51a15",
     "https://deno.land/x/unknownutil@v3.10.0/util.ts": "5c9b52ef699e569ccec9d4c33148545bf5328c6a5e2f6f56f651ce6bdd44eb1e"
-  },
-  "workspace": {
-    "dependencies": [
-      "npm:@langchain/core@^0.1.60",
-      "npm:@langchain/openai@^0.0.28",
-      "npm:langchain@^0.1.36",
-      "npm:zod-to-json-schema@^3.23.0",
-      "npm:zod@^3.23.4"
-    ]
   }
 }
