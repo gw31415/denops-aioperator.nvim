@@ -2,7 +2,7 @@
 
 Text converting operator via OpenAI API.
 
-![rec](https://github.com/gw31415/denops-aioperator.nvim/assets/24710985/312f25c1-c898-4435-aa0a-91756f4dbcbd)
+![rec](https://github.com/gw31415/denops-aioperator.nvim/assets/24710985/fb83de00-b972-4cdc-bb9e-71acd3576876)
 
 ## Installation & Config
 
