@@ -70,16 +70,18 @@ function _G._aioperator_opfunc(type)
 	local pos = {}
 	local _, line1, col1, _ = unpack(vim.fn.getpos("'[") or { 0, 0, 0, 0 })
 	local _, line2, col2, _ = unpack(vim.fn.getpos("']") or { 0, 0, 0, 0 })
+	if type == "line" then
+		col2 = #vim.fn.getline(line2)
+	end
 	for line = line1, math.min(line2, vim.fn.line("w$")) do
 		if line ~= line1 and line ~= line2 then
-			---@diagnostic disable-next-line: param-type-mismatch
 			table.insert(pos, vim.fn.matchaddpos('Visual', { line }))
 		else
 			local str = vim.fn.getline(line)
 			local start_idx = line == line1 and col1 or 1
 			local end_idx = line == line2 and col2 or #str
 			for i = start_idx, end_idx do
-				table.insert(pos, vim.fn.matchaddpos('Visual', { { line, vim.fn.byteidx(str, i) } }))
+				table.insert(pos, vim.fn.matchaddpos('Visual', { { line, i } }))
 			end
 		end
 	end
