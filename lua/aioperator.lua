@@ -130,16 +130,17 @@ function _G._aioperator_opfunc(type)
 	end
 
 	local function finally()
-		vim.api.nvim_set_option_value('modifiable', ma, {})
-		vim.api.nvim_set_option_value('ve', ve, {})
-		vim.fn['denops#callback#unregister'](responseWriterId)
 		if cursorIsEOF then
+			vim.api.nvim_set_option_value('modifiable', true, {})
 			vim.cmd.undojoin()
 			vim.api.nvim_feedkeys(
 				vim.api.nvim_replace_termcodes('dd', true, false, true),
 				'n', true
 			)
 		end
+		vim.api.nvim_set_option_value('modifiable', ma, {})
+		vim.api.nvim_set_option_value('ve', ve, {})
+		vim.fn['denops#callback#unregister'](responseWriterId)
 	end
 
 	-- Set nomodifiable
@@ -156,6 +157,4 @@ function _G._aioperator_opfunc(type)
 	end)
 end
 
-return {
-	opfunc = _G._aioperator_opfunc,
-}
+return { opfunc = _G._aioperator_opfunc }
