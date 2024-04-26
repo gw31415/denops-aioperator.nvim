@@ -26,20 +26,22 @@ local function create_response_writer(opts)
 	vim.api.nvim_buf_set_lines(bufnr, line_start, line_start, true, {})
 
 	-- Store entire response: initial value is the string that was initially to the right of the cursor
+	local writing = left_hand_side
 	return function(replacement)
 		-- Changed to modifiable
 		vim.api.nvim_set_option_value('modifiable', true, { buf = bufnr })
 
 		-- Delete the currently written response
-		local writing = left_hand_side .. replacement
 		local num_lines = #(vim.split(writing, "\n", {}))
 		vim.api.nvim_buf_call(bufnr, vim.cmd.undojoin)
 		vim.api.nvim_buf_set_lines(bufnr, line_start, line_start + num_lines, false, {})
+
 
 		-- Update the line start to wherever the extmark is now
 		line_start = vim.api.nvim_buf_get_extmark_by_id(bufnr, nsnum, extmarkid, {})[1]
 
 		-- Write out the latest
+		writing = left_hand_side .. replacement
 		local lines = vim.split(writing .. right_hand_side, "\n", {})
 		vim.api.nvim_buf_call(bufnr, vim.cmd.undojoin)
 		vim.api.nvim_buf_set_lines(bufnr, line_start, line_start, false, lines)
