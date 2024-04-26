@@ -10,12 +10,13 @@ vim.fn["dein#add"]("gw31415/denops-aioperator.nvim")
 
 -- Configuration
 vim.api.nvim_set_var('aioperator_opts', {
-	openai = { -- This arg will be passed to LangChain's `ChatOpenAI` constructor.
+    -- ↓This arg will be passed to LangChain's `ChatOpenAI` constructor.
+	openai = {
 		apiKey = "sk-********-****-****-****-************",
 		-- If `apiKey` not specified explicitly, the environment variable `OPENAI_API_KEY` is used.
 
 		-- More options: https://api.js.langchain.com/classes/langchain_openai.ChatOpenAI.html
- },
+     },
 
 	-- scroll = false, -- Automatically scroll the window to the bottom. Default: true
 })
