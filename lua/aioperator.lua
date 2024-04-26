@@ -122,10 +122,24 @@ function _G._aioperator_opfunc(type)
 	local ma = vim.api.nvim_get_option_value('modifiable', {})
 	local responseWriterId = vim.fn["denops#callback#register"](create_response_writer(opts))
 
+	local cursorIsEOF = vim.fn.line('.') == vim.fn.line('$')
+	if cursorIsEOF then
+		-- If it is the last line, move the cursor to the new empty line.
+		vim.api.nvim_set_option_value('modifiable', true, {})
+		vim.cmd [[undoj | exe "noau norm! o\<ESC>"]]
+	end
+
 	local function finally()
 		vim.api.nvim_set_option_value('modifiable', ma, {})
 		vim.api.nvim_set_option_value('ve', ve, {})
 		vim.fn['denops#callback#unregister'](responseWriterId)
+		if cursorIsEOF then
+			vim.cmd.undojoin()
+			vim.api.nvim_feedkeys(
+				vim.api.nvim_replace_termcodes('dd', true, false, true),
+				'n', true
+			)
+		end
 	end
 
 	-- Set nomodifiable
