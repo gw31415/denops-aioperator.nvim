@@ -5,8 +5,8 @@ import { isString } from "https://deno.land/x/unknownutil@v3.10.0/mod.ts#^.ts";
 
 export function main(denops: Denops) {
   denops.dispatcher = {
-    async start(order, source, openai, responseWriterFuncId) {
-      if (!isString(order)) {
+    async start(instruction, source, openai, responseWriterFuncId) {
+      if (!isString(instruction)) {
         throw new Error("Order must be a string");
       }
       if (!isString(source)) {
@@ -25,7 +25,7 @@ export function main(denops: Denops) {
       );
 
       const model = new ChatOpenAI(openaiOpts);
-      const stream = convert(model, order, source);
+      const stream = convert(model, instruction, source);
 
       // Stream a diff as JSON patch operations
       for await (const replacement of stream) {

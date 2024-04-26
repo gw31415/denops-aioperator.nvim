@@ -88,7 +88,7 @@ function _G._aioperator_opfunc(type)
 	vim.cmd.redraw()
 
 	-- Reseive input
-	local order = vim.fn.input("Instruction: ")
+	local instruction = vim.fn.input("Instruction: ")
 
 	-- Remove highlights
 	for _, id in pairs(pos) do
@@ -97,7 +97,7 @@ function _G._aioperator_opfunc(type)
 	vim.cmd.redraw()
 
 	-- Exit if no input
-	if order == "" then return end
+	if instruction == "" then return end
 
 	-- Note the value of virtualedit
 	local ve = vim.api.nvim_get_option_value('ve', {})
@@ -147,7 +147,7 @@ function _G._aioperator_opfunc(type)
 	vim.api.nvim_set_option_value('modifiable', false, {})
 
 	vim.fn["denops#request_async"]('aioperator', 'start', {
-		order,
+		instruction,
 		source,
 		opts.openai or {},
 		responseWriterId,

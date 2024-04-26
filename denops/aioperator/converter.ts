@@ -5,11 +5,11 @@ import { JsonOutputFunctionsParser } from "npm:langchain/output_parsers";
 import { ChatPromptTemplate } from "npm:@langchain/core/prompts";
 
 /**
- * Convert text according to a given order.
+ * Convert the source text according to the given instruction.
  */
 export async function* convert(
   model: ChatOpenAI<ChatOpenAICallOptions>,
-  order: string,
+  instruction: string,
   source: string,
 ): AsyncGenerator<string> {
   const modelParams = {
@@ -32,7 +32,7 @@ export async function* convert(
   };
 
   const prompt = ChatPromptTemplate.fromTemplate(
-    "Convert text according to [Order: {order}]:\n {source}",
+    "Convert text according to [Order: {instruction}]:\n {source}",
   );
 
   const chain = prompt
@@ -40,7 +40,7 @@ export async function* convert(
     .pipe(new JsonOutputFunctionsParser());
 
   const stream = await chain.stream({
-    order,
+    instruction,
     source,
   });
   for await (const chunk of stream) {
