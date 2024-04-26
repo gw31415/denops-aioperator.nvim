@@ -22,7 +22,9 @@ vim.api.nvim_set_var('aioperator_opts', {
 })
 
 -- Key mapping
-vim.keymap.set({ "n", "x" }, "gG", function(arg) require 'aioperator'.opfunc(arg) end, { expr = true })
+vim.keymap.set({ "n", "x" }, "gG", function(arg)
+	return require 'aioperator'.opfunc(arg)
+end, { expr = true })
 ```
 
 ## Usage
