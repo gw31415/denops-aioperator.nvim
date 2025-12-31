@@ -17,7 +17,7 @@ export function main(denops: Denops) {
 			}
 			const openaiOpts = Object.assign(
 				{
-					model: "gpt-4o",
+					model: "gpt-5-mini",
 					apiKey: Deno.env.get("OPENAI_API_KEY") ?? "",
 					temperature: 0,
 				},
