@@ -1,5 +1,5 @@
 import type OpenAI from "jsr:@openai/openai";
-import { DEFAULT_MODEL } from "./main.ts";
+import { DEFAULT_MODEL, DEFAULT_TEMPERATURE } from "./main.ts";
 
 /**
  * Convert the source text according to the given instruction.
@@ -25,7 +25,7 @@ export async function* convert(
       : DEFAULT_MODEL,
     temperature: typeof requestOptions.temperature === "number"
       ? requestOptions.temperature
-      : 0,
+      : DEFAULT_TEMPERATURE,
     stream: true,
     messages: [
       {

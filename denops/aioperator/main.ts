@@ -4,6 +4,7 @@ import type { Denops } from "jsr:@denops/std";
 import { convert } from "./converter.ts";
 
 export const DEFAULT_MODEL = "gpt-5-mini";
+export const DEFAULT_TEMPERATURE = 1;
 
 export function main(denops: Denops) {
   denops.dispatcher = {
@@ -30,7 +31,7 @@ export function main(denops: Denops) {
       const openaiOpts: Record<string, unknown> = {
         model: DEFAULT_MODEL,
         apiKey: Deno.env.get("OPENAI_API_KEY") ?? "",
-        temperature: 0,
+        temperature: DEFAULT_TEMPERATURE,
         ...userOpenAIOpts,
       };
 
