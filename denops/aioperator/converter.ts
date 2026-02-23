@@ -1,50 +1,52 @@
-import { ChatPromptTemplate } from "npm:@langchain/core/prompts";
-import type { ChatOpenAI, ChatOpenAICallOptions } from "npm:@langchain/openai";
-import { JsonOutputFunctionsParser } from "npm:langchain/output_parsers";
-import { z } from "npm:zod";
-import { zodToJsonSchema } from "npm:zod-to-json-schema";
+import type OpenAI from "jsr:@openai/openai";
+import { DEFAULT_MODEL } from "./main.ts";
 
 /**
  * Convert the source text according to the given instruction.
  */
 export async function* convert(
-	model: ChatOpenAI<ChatOpenAICallOptions>,
-	instruction: string,
-	source: string,
+  client: OpenAI,
+  instruction: string,
+  source: string,
+  openaiOpts: Record<string, unknown>,
 ): AsyncGenerator<string> {
-	const modelParams = {
-		functions: [
-			{
-				name: "replace",
-				description: "Replace a string with another string",
-				parameters: zodToJsonSchema(
-					z.object({
-						text: z
-							.string()
-							.describe(
-								"The post-conversion string to replace the pre-conversion location.",
-							),
-					}),
-				),
-			},
-		],
-		function_call: { name: "replace" },
-	};
+  const {
+    apiKey: _apiKey,
+    baseURL: _baseURL,
+    organization: _organization,
+    project: _project,
+    ...requestOptions
+  } = openaiOpts;
 
-	const prompt = ChatPromptTemplate.fromTemplate(
-		"Convert text according to [Order: {instruction}]:\n {source}",
-	);
+  const stream = await client.chat.completions.create({
+    ...requestOptions,
+    model: typeof requestOptions.model === "string"
+      ? requestOptions.model
+      : DEFAULT_MODEL,
+    temperature: typeof requestOptions.temperature === "number"
+      ? requestOptions.temperature
+      : 0,
+    stream: true,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You rewrite text exactly as requested. Return only the rewritten text without explanations, markdown fences, or surrounding quotes.",
+      },
+      {
+        role: "user",
+        content: `Order: ${instruction}\n\nSource:\n${source}`,
+      },
+    ],
+  });
 
-	const chain = prompt
-		.pipe(model.bind(modelParams))
-		.pipe(new JsonOutputFunctionsParser());
-
-	const stream = await chain.stream({
-		instruction,
-		source,
-	});
-	for await (const chunk of stream) {
-		const { text }: { text: string } = chunk;
-		yield text;
-	}
+  let replacement = "";
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content;
+    if (!delta) {
+      continue;
+    }
+    replacement += delta;
+    yield replacement;
+  }
 }

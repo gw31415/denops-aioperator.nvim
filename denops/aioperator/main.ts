@@ -1,7 +1,9 @@
-import { ChatOpenAI } from "npm:@langchain/openai";
+import OpenAI from "jsr:@openai/openai";
 import { isString } from "jsr:@core/unknownutil";
 import type { Denops } from "jsr:@denops/std";
 import { convert } from "./converter.ts";
+
+export const DEFAULT_MODEL = "gpt-5-mini";
 
 export function main(denops: Denops) {
   denops.dispatcher = {
@@ -20,19 +22,34 @@ export function main(denops: Denops) {
       if (!isString(responseWriterFuncId)) {
         throw new Error("Response writer ID must be a string");
       }
-      const openaiOpts = Object.assign(
-        {
-          model: "gpt-5-mini",
-          apiKey: Deno.env.get("OPENAI_API_KEY") ?? "",
-          temperature: 0,
-        },
-        openai,
-      );
 
-      const model = new ChatOpenAI(openaiOpts);
-      const stream = convert(model, instruction, source);
+      const userOpenAIOpts = (typeof openai === "object" && openai !== null)
+        ? openai as Record<string, unknown>
+        : {};
 
-      // Stream a diff as JSON patch operations
+      const openaiOpts: Record<string, unknown> = {
+        model: DEFAULT_MODEL,
+        apiKey: Deno.env.get("OPENAI_API_KEY") ?? "",
+        temperature: 0,
+        ...userOpenAIOpts,
+      };
+
+      const client = new OpenAI({
+        apiKey: typeof openaiOpts.apiKey === "string" ? openaiOpts.apiKey : "",
+        baseURL: typeof openaiOpts.baseURL === "string"
+          ? openaiOpts.baseURL
+          : undefined,
+        organization: typeof openaiOpts.organization === "string"
+          ? openaiOpts.organization
+          : undefined,
+        project: typeof openaiOpts.project === "string"
+          ? openaiOpts.project
+          : undefined,
+      });
+
+      const stream = convert(client, instruction, source, openaiOpts);
+
+      // Stream replacement text incrementally.
       for await (const replacement of stream) {
         await denops.call(
           "denops#callback#call",
