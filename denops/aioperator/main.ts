@@ -3,6 +3,8 @@ import type { Denops } from "@denops/core";
 import { convert } from "./converter.ts";
 
 export const DEFAULT_MODEL = "gpt-realtime-mini";
+const FLUSH_INTERVAL_MS = 16;
+const MAX_BATCH_CHARS = 512;
 
 export function main(denops: Denops) {
   denops.dispatcher = {
@@ -28,17 +30,38 @@ export function main(denops: Denops) {
       };
 
       const stream = convert(instruction, source, openaiOpts);
+      let pending = "";
+      let lastFlushAt = performance.now();
+
+      const flush = async () => {
+        if (pending.length === 0) {
+          return;
+        }
+        const text = pending;
+        pending = "";
+        lastFlushAt = performance.now();
+        await denops.call(
+          "denops#callback#call",
+          responseWriterFuncId,
+          { type: "delta", text },
+        );
+      };
 
       try {
-        // Stream text deltas incrementally.
+        // Stream text deltas incrementally with short batching to reduce RPC overhead.
         for await (const delta of stream) {
-          await denops.call(
-            "denops#callback#call",
-            responseWriterFuncId,
-            { type: "delta", text: delta },
-          );
+          pending += delta;
+
+          const now = performance.now();
+          const shouldFlush = pending.length >= MAX_BATCH_CHARS ||
+            (now - lastFlushAt) >= FLUSH_INTERVAL_MS ||
+            delta.includes("\n");
+          if (shouldFlush) {
+            await flush();
+          }
         }
       } finally {
+        await flush();
         await denops.call(
           "denops#callback#call",
           responseWriterFuncId,
