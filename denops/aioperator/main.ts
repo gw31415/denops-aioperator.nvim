@@ -8,12 +8,7 @@ export const DEFAULT_TEMPERATURE = 1;
 
 export function main(denops: Denops) {
   denops.dispatcher = {
-    async start(
-      instruction: unknown,
-      source: unknown,
-      openai: unknown,
-      responseWriterFuncId: unknown,
-    ) {
+    async start(instruction, source, openai, responseWriterFuncId) {
       if (!isString(instruction)) {
         throw new Error("Order must be a string");
       }
