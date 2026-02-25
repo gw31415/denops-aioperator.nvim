@@ -436,10 +436,14 @@
     "https://deno.land/x/unknownutil@v3.10.0/util.ts": "5c9b52ef699e569ccec9d4c33148545bf5328c6a5e2f6f56f651ce6bdd44eb1e"
   },
   "workspace": {
-    "dependencies": [
-      "jsr:@core/unknownutil@4.3.0",
-      "jsr:@denops/core@8.0.1",
-      "jsr:@openai/openai@6.25.0"
-    ]
+    "members": {
+      "denops/aioperator": {
+        "dependencies": [
+          "jsr:@core/unknownutil@4.3.0",
+          "jsr:@denops/core@8.0.1",
+          "jsr:@openai/openai@6.25.0"
+        ]
+      }
+    }
   }
 }

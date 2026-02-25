@@ -1,5 +1,5 @@
 import OpenAI from "@openai/openai";
-import { OpenAIRealtimeWebSocket } from "jsr:@openai/openai@6.25.0/beta/realtime/websocket";
+import { OpenAIRealtimeWebSocket } from "@openai/openai/beta/realtime/websocket";
 import { DEFAULT_MODEL } from "./main.ts";
 
 /**
