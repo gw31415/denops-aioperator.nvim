@@ -1,8 +1,13 @@
 {
-	"fmt": {
-		"indentWidth": 2,
-		"semiColons": true,
-		"singleQuote": false,
-		"useTabs": false
-	}
+  "imports": {
+    "@core/unknownutil": "jsr:@core/unknownutil@4.3.0",
+    "@denops/core": "jsr:@denops/core@8.0.1",
+    "@openai/openai": "jsr:@openai/openai@5.10.1"
+  },
+  "fmt": {
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false,
+    "useTabs": false
+  }
 }

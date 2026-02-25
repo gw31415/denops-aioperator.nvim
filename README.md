@@ -33,9 +33,11 @@ end, { expr = true })
 
 ## Usage
 
-This plugin provides only the operator function `require 'aioperator'.opfunc`. See `:help operator` for more information on how to use the operator.
+This plugin provides only the operator function `require 'aioperator'.opfunc`.
+See `:help operator` for more information on how to use the operator.
 
 1. Press the operator key you set and select the textobj you want to convert.
-   - or, you can use the visual mode to select the text before pressing the operator key.
+   - or, you can use the visual mode to select the text before pressing the
+     operator key.
 2. Input the instruction about the conversion you want to make.
 3. Press Enter then the conversion result will be inserted.

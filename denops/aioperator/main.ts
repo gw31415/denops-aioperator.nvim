@@ -1,6 +1,6 @@
-import OpenAI from "jsr:@openai/openai";
-import { isString } from "jsr:@core/unknownutil";
-import type { Denops } from "jsr:@denops/std";
+import OpenAI from "@openai/openai";
+import { isString } from "@core/unknownutil";
+import type { Denops } from "@denops/core";
 import { convert } from "./converter.ts";
 
 export const DEFAULT_MODEL = "gpt-5-mini";

@@ -1,4 +1,4 @@
-import type OpenAI from "jsr:@openai/openai";
+import type OpenAI from "@openai/openai";
 import { DEFAULT_MODEL, DEFAULT_TEMPERATURE } from "./main.ts";
 
 /**
