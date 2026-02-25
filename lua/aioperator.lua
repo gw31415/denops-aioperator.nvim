@@ -13,23 +13,14 @@ local function create_response_writer(opts)
 	local _, lnum, col, _ = unpack(vim.fn.getcharpos '.' or { 0, 0, 0, 0 })
 	-- zero-indexed lnum
 	local line_start      = lnum - 1
+	local line_col        = col - 1
 
-	local first_line      = vim.api.nvim_buf_get_lines(bufnr, line_start, line_start + 1, true)[1]
-	-- string found to the left of the cursor
-	local left_hand_side  = vim.fn.slice(first_line, 0, col - 1)
-	-- string found to the right of the cursor
-	local right_hand_side = vim.fn.slice(first_line, col - 1)
-
-	-- Keep only left side while streaming, and restore right side once at completion.
-	vim.api.nvim_buf_set_lines(bufnr, line_start, line_start + 1, false, { left_hand_side })
-
-	local nsnum = vim.api.nvim_create_namespace 'aioperator'
-	local extmarkid = vim.api.nvim_buf_set_extmark(bufnr, nsnum, line_start, #left_hand_side, {
+	local nsnum           = vim.api.nvim_create_namespace 'aioperator'
+	local extmarkid       = vim.api.nvim_buf_set_extmark(bufnr, nsnum, line_start, line_col, {
 		right_gravity = true,
 	})
 
-	local is_modifiable = false
-	local right_restored = false
+	local is_modifiable   = false
 
 	local function set_modifiable(value)
 		if is_modifiable == value then
@@ -66,15 +57,6 @@ local function create_response_writer(opts)
 		end
 	end
 
-	local function restore_right_side()
-		if right_restored then
-			return
-		end
-		right_restored = true
-		insert_text(right_hand_side)
-		set_modifiable(false)
-	end
-
 	return function(event)
 		if type(event) ~= 'table' then
 			-- Backward compatible path for string payloads.
@@ -85,7 +67,7 @@ local function create_response_writer(opts)
 		if event.type == 'delta' then
 			insert_text(type(event.text) == 'string' and event.text or '')
 		elseif event.type == 'done' then
-			restore_right_side()
+			set_modifiable(false)
 		end
 	end
 end
