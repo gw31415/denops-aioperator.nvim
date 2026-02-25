@@ -29,12 +29,20 @@ export function main(denops: Denops) {
 
       const stream = convert(instruction, source, openaiOpts);
 
-      // Stream replacement text incrementally.
-      for await (const replacement of stream) {
+      try {
+        // Stream text deltas incrementally.
+        for await (const delta of stream) {
+          await denops.call(
+            "denops#callback#call",
+            responseWriterFuncId,
+            { type: "delta", text: delta },
+          );
+        }
+      } finally {
         await denops.call(
           "denops#callback#call",
           responseWriterFuncId,
-          replacement,
+          { type: "done" },
         );
       }
     },

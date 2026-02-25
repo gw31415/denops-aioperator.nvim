@@ -25,8 +25,8 @@ export async function* convert(
   const client = new OpenAI({ apiKey });
   const rt = new OpenAIRealtimeWebSocket({ model }, client);
 
-  let replacement = "";
   const queue: string[] = [];
+  let queueHead = 0;
   let done = false;
   let streamError: Error | null = null;
   let wake: (() => void) | null = null;
@@ -62,8 +62,7 @@ export async function* convert(
   });
 
   rt.on("response.text.delta", (event) => {
-    replacement += event.delta;
-    push(replacement);
+    push(event.delta);
   });
   rt.on("response.done", () => {
     finish();
@@ -102,17 +101,23 @@ export async function* convert(
     },
   });
 
-  while (!done || queue.length > 0) {
+  while (!done || queueHead < queue.length) {
     if (streamError) {
       throw streamError;
     }
-    if (queue.length > 0) {
-      const next = queue.shift();
+
+    if (queueHead < queue.length) {
+      const next = queue[queueHead++];
+      if (queueHead >= 1024 && queueHead * 2 >= queue.length) {
+        queue.splice(0, queueHead);
+        queueHead = 0;
+      }
       if (next !== undefined) {
         yield next;
       }
       continue;
     }
+
     await new Promise<void>((resolve) => {
       wake = resolve;
     });

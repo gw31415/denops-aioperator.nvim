@@ -1,7 +1,7 @@
 -- Create a response_writer for the current buffer window
 local function create_response_writer(opts)
 	-- Setup options
-	opts                  = vim.tbl_extend("force", {
+	opts                  = vim.tbl_extend('force', {
 		bufnr = vim.api.nvim_get_current_buf(),
 		winnr = vim.api.nvim_get_current_win(),
 		scroll = true,
@@ -10,12 +10,9 @@ local function create_response_writer(opts)
 	local winnr           = opts.winnr
 	local scroll          = opts.scroll
 
-	local _, lnum, col, _ = unpack(vim.fn.getcharpos('.') or { 0, 0, 0, 0 })
+	local _, lnum, col, _ = unpack(vim.fn.getcharpos '.' or { 0, 0, 0, 0 })
 	-- zero-indexed lnum
 	local line_start      = lnum - 1
-
-	local nsnum           = vim.api.nvim_create_namespace("aioperator")
-	local extmarkid       = vim.api.nvim_buf_set_extmark(bufnr, nsnum, line_start, 0, {})
 
 	local first_line      = vim.api.nvim_buf_get_lines(bufnr, line_start, line_start + 1, true)[1]
 	-- string found to the left of the cursor
@@ -23,35 +20,72 @@ local function create_response_writer(opts)
 	-- string found to the right of the cursor
 	local right_hand_side = vim.fn.slice(first_line, col - 1)
 
-	vim.api.nvim_buf_set_lines(bufnr, line_start, line_start, true, {})
+	-- Keep only left side while streaming, and restore right side once at completion.
+	vim.api.nvim_buf_set_lines(bufnr, line_start, line_start + 1, false, { left_hand_side })
 
-	-- Store entire response: initial value is the string that was initially to the right of the cursor
-	local writing = left_hand_side
-	return function(replacement)
-		-- Changed to modifiable
-		vim.api.nvim_set_option_value('modifiable', true, { buf = bufnr })
+	local nsnum = vim.api.nvim_create_namespace 'aioperator'
+	local extmarkid = vim.api.nvim_buf_set_extmark(bufnr, nsnum, line_start, #left_hand_side, {
+		right_gravity = true,
+	})
 
-		-- Delete the currently written response
-		local num_lines = #(vim.split(writing, "\n", {}))
+	local is_modifiable = false
+	local right_restored = false
+
+	local function set_modifiable(value)
+		if is_modifiable == value then
+			return
+		end
+		vim.api.nvim_set_option_value('modifiable', value, { buf = bufnr })
+		is_modifiable = value
+	end
+
+	local function get_insert_pos()
+		local pos = vim.api.nvim_buf_get_extmark_by_id(bufnr, nsnum, extmarkid, {})
+		if not pos or #pos < 2 then
+			return nil, nil
+		end
+		return pos[1], pos[2]
+	end
+
+	local function insert_text(text)
+		if text == '' then
+			return
+		end
+		local row, colnum = get_insert_pos()
+		if row == nil or colnum == nil then
+			return
+		end
+
+		set_modifiable(true)
+		local lines = vim.split(text, '\n', { plain = true, trimempty = false })
 		vim.api.nvim_buf_call(bufnr, vim.cmd.undojoin)
-		vim.api.nvim_buf_set_lines(bufnr, line_start, line_start + num_lines, false, {})
+		vim.api.nvim_buf_set_text(bufnr, row, colnum, row, colnum, lines)
 
-
-		-- Update the line start to wherever the extmark is now
-		line_start = vim.api.nvim_buf_get_extmark_by_id(bufnr, nsnum, extmarkid, {})[1]
-
-		-- Write out the latest
-		writing = left_hand_side .. replacement
-		local lines = vim.split(writing .. right_hand_side, "\n", {})
-		vim.api.nvim_buf_call(bufnr, vim.cmd.undojoin)
-		vim.api.nvim_buf_set_lines(bufnr, line_start, line_start, false, lines)
-
-		-- Changed to unmodifiable
-		vim.api.nvim_set_option_value('modifiable', false, { buf = bufnr })
-
-		-- Scroll
 		if scroll and #lines > 1 and bufnr == vim.fn.winbufnr(winnr) then
-			vim.api.nvim_win_call(winnr, function() vim.cmd "noau norm! zb" end)
+			vim.api.nvim_win_call(winnr, function() vim.cmd 'noau norm! zb' end)
+		end
+	end
+
+	local function restore_right_side()
+		if right_restored then
+			return
+		end
+		right_restored = true
+		insert_text(right_hand_side)
+		set_modifiable(false)
+	end
+
+	return function(event)
+		if type(event) ~= 'table' then
+			-- Backward compatible path for string payloads.
+			insert_text(tostring(event))
+			return
+		end
+
+		if event.type == 'delta' then
+			insert_text(type(event.text) == 'string' and event.text or '')
+		elseif event.type == 'done' then
+			restore_right_side()
 		end
 	end
 end
@@ -61,19 +95,19 @@ function _G._aioperator_opfunc(type)
 	if not type or type == '' then
 		vim.api.nvim_set_option_value('operatorfunc', 'v:lua._aioperator_opfunc', {})
 		return 'g@'
-	elseif type == "block" then
-		vim.notify("Block selection is not supported.", vim.log.levels.ERROR, { title = "AI Operator" })
+	elseif type == 'block' then
+		vim.notify('Block selection is not supported.', vim.log.levels.ERROR, { title = 'AI Operator' })
 		return
 	end
 
 	-- Add highlights
 	local pos = {}
-	local _, line1, col1, _ = unpack(vim.fn.getpos("'[") or { 0, 0, 0, 0 })
-	local _, line2, col2, _ = unpack(vim.fn.getpos("']") or { 0, 0, 0, 0 })
-	if type == "line" then
+	local _, line1, col1, _ = unpack(vim.fn.getpos "'[" or { 0, 0, 0, 0 })
+	local _, line2, col2, _ = unpack(vim.fn.getpos "']" or { 0, 0, 0, 0 })
+	if type == 'line' then
 		col2 = #vim.fn.getline(line2)
 	end
-	for line = line1, math.min(line2, vim.fn.line("w$")) do
+	for line = line1, math.min(line2, vim.fn.line 'w$') do
 		if line ~= line1 and line ~= line2 then
 			table.insert(pos, vim.fn.matchaddpos('Visual', { line }))
 		else
@@ -88,7 +122,7 @@ function _G._aioperator_opfunc(type)
 	vim.cmd.redraw()
 
 	-- Reseive input
-	local instruction = vim.fn.input("Instruction: ")
+	local instruction = vim.fn.input 'Instruction: '
 
 	-- Remove highlights
 	for _, id in pairs(pos) do
@@ -97,16 +131,16 @@ function _G._aioperator_opfunc(type)
 	vim.cmd.redraw()
 
 	-- Exit if no input
-	if instruction == "" then return end
+	if instruction == '' then return end
 
 	-- Note the value of virtualedit
 	local ve = vim.api.nvim_get_option_value('ve', {})
 	vim.api.nvim_set_option_value('ve', 'onemore', {}) -- To support deletion up to the end of the line.
 
-	if type == "line" then
+	if type == 'line' then
 		vim.cmd "noau norm! '[V']c"
 	else
-		vim.cmd "noau norm! `[v`]d"
+		vim.cmd 'noau norm! `[v`]d'
 	end
 
 	-- Change to normal-mode
@@ -115,14 +149,14 @@ function _G._aioperator_opfunc(type)
 		'm', true
 	)
 
-	local source = vim.fn.getreg('"')
+	local source = vim.fn.getreg '"'
 
-	local opts = vim.api.nvim_get_var('aioperator_opts')
+	local opts = vim.api.nvim_get_var 'aioperator_opts'
 
 	local ma = vim.api.nvim_get_option_value('modifiable', {})
-	local responseWriterId = vim.fn["denops#callback#register"](create_response_writer(opts))
+	local responseWriterId = vim.fn['denops#callback#register'](create_response_writer(opts))
 
-	local cursorIsEOF = vim.fn.line('.') == vim.fn.line('$')
+	local cursorIsEOF = vim.fn.line '.' == vim.fn.line '$'
 	if cursorIsEOF then
 		-- If it is the last line, move the cursor to the new empty line.
 		vim.api.nvim_set_option_value('modifiable', true, {})
@@ -146,7 +180,7 @@ function _G._aioperator_opfunc(type)
 	-- Set nomodifiable
 	vim.api.nvim_set_option_value('modifiable', false, {})
 
-	vim.fn["denops#request_async"]('aioperator', 'start', {
+	vim.fn['denops#request_async']('aioperator', 'start', {
 		instruction,
 		source,
 		opts.openai or {},
