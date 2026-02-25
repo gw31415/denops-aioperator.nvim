@@ -12,14 +12,11 @@ vim.fn["dein#add"]("gw31415/denops-aioperator.nvim")
 
 -- Configuration
 vim.api.nvim_set_var('aioperator_opts', {
-	-- ↓These args configure OpenAI SDK client/request options.
+	-- ↓These args configure OpenAI WebSocket mode.
 	openai = {
-		apiKey = "sk-********-****-****-****-************",
-		-- If `apiKey` not specified explicitly, the environment variable `OPENAI_API_KEY` is used.
-		-- baseURL = "https://api.openai.com/v1", -- For OpenAI-compatible services
-
-		-- Client options: https://github.com/openai/openai-node#readme
-		-- Chat request options: https://platform.openai.com/docs/api-reference/chat/create
+		api_key = "sk-********-****-****-****-************",
+		-- If `api_key` is not specified explicitly, the environment variable `OPENAI_API_KEY` is used.
+		model = "gpt-5-mini",
 	},
 
 	-- scroll = false, -- Automatically scroll the window to the bottom. Default: true
@@ -41,3 +38,15 @@ See `:help operator` for more information on how to use the operator.
      operator key.
 2. Input the instruction about the conversion you want to make.
 3. Press Enter then the conversion result will be inserted.
+
+## Breaking Changes
+
+- This plugin now uses OpenAI WebSocket mode only.
+- `g:aioperator_opts.openai` supports only:
+  - `api_key`
+  - `model`
+- Legacy keys are removed and not supported:
+  - `apiKey`, `baseURL`, `organization`, `project`, `temperature`, and other
+    Chat Completions options
+- When WebSocket connection/authentication fails, the request exits with an
+  error immediately (no HTTP fallback).

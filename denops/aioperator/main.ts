@@ -1,10 +1,8 @@
-import OpenAI from "@openai/openai";
 import { isString } from "@core/unknownutil";
 import type { Denops } from "@denops/core";
 import { convert } from "./converter.ts";
 
 export const DEFAULT_MODEL = "gpt-5-mini";
-export const DEFAULT_TEMPERATURE = 1;
 
 export function main(denops: Denops) {
   denops.dispatcher = {
@@ -24,26 +22,12 @@ export function main(denops: Denops) {
         : {};
 
       const openaiOpts: Record<string, unknown> = {
+        api_key: Deno.env.get("OPENAI_API_KEY") ?? "",
         model: DEFAULT_MODEL,
-        apiKey: Deno.env.get("OPENAI_API_KEY") ?? "",
-        temperature: DEFAULT_TEMPERATURE,
         ...userOpenAIOpts,
       };
 
-      const client = new OpenAI({
-        apiKey: typeof openaiOpts.apiKey === "string" ? openaiOpts.apiKey : "",
-        baseURL: typeof openaiOpts.baseURL === "string"
-          ? openaiOpts.baseURL
-          : undefined,
-        organization: typeof openaiOpts.organization === "string"
-          ? openaiOpts.organization
-          : undefined,
-        project: typeof openaiOpts.project === "string"
-          ? openaiOpts.project
-          : undefined,
-      });
-
-      const stream = convert(client, instruction, source, openaiOpts);
+      const stream = convert(instruction, source, openaiOpts);
 
       // Stream replacement text incrementally.
       for await (const replacement of stream) {

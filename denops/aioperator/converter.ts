@@ -1,52 +1,124 @@
-import type OpenAI from "@openai/openai";
-import { DEFAULT_MODEL, DEFAULT_TEMPERATURE } from "./main.ts";
+import OpenAI from "@openai/openai";
+import { OpenAIRealtimeWebSocket } from "@openai/openai/beta/realtime/websocket";
+import { DEFAULT_MODEL } from "./main.ts";
 
 /**
  * Convert the source text according to the given instruction.
  */
 export async function* convert(
-  client: OpenAI,
   instruction: string,
   source: string,
   openaiOpts: Record<string, unknown>,
 ): AsyncGenerator<string> {
-  const {
-    apiKey: _apiKey,
-    baseURL: _baseURL,
-    organization: _organization,
-    project: _project,
-    ...requestOptions
-  } = openaiOpts;
+  const apiKey = typeof openaiOpts.api_key === "string"
+    ? openaiOpts.api_key
+    : "";
+  if (!apiKey) {
+    throw new Error(
+      "OpenAI API key is missing: set openai.api_key or OPENAI_API_KEY",
+    );
+  }
+  const model = typeof openaiOpts.model === "string"
+    ? openaiOpts.model
+    : DEFAULT_MODEL;
 
-  const stream = await client.chat.completions.create({
-    ...requestOptions,
-    model: typeof requestOptions.model === "string"
-      ? requestOptions.model
-      : DEFAULT_MODEL,
-    temperature: typeof requestOptions.temperature === "number"
-      ? requestOptions.temperature
-      : DEFAULT_TEMPERATURE,
-    stream: true,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You rewrite text exactly as requested. Return only the rewritten text without explanations, markdown fences, or surrounding quotes.",
-      },
-      {
-        role: "user",
-        content: `Order: ${instruction}\n\nSource:\n${source}`,
-      },
-    ],
-  });
+  const client = new OpenAI({ apiKey });
+  const rt = new OpenAIRealtimeWebSocket({ model }, client);
 
   let replacement = "";
-  for await (const chunk of stream) {
-    const delta = chunk.choices[0]?.delta?.content;
-    if (!delta) {
+  const queue: string[] = [];
+  let done = false;
+  let streamError: Error | null = null;
+  let wake: (() => void) | null = null;
+
+  const notify = () => {
+    if (wake) {
+      wake();
+      wake = null;
+    }
+  };
+  const push = (value: string) => {
+    queue.push(value);
+    notify();
+  };
+  const fail = (error: Error) => {
+    streamError = error;
+    done = true;
+    notify();
+  };
+  const finish = () => {
+    done = true;
+    notify();
+  };
+
+  const opened = new Promise<void>((resolve, reject) => {
+    rt.socket.addEventListener("open", () => resolve(), { once: true });
+    rt.socket.addEventListener("error", () => {
+      reject(new Error("Failed to open WebSocket connection"));
+    }, { once: true });
+    rt.socket.addEventListener("close", () => {
+      reject(new Error("WebSocket connection was closed before opening"));
+    }, { once: true });
+  });
+
+  rt.on("response.text.delta", (event) => {
+    replacement += event.delta;
+    push(replacement);
+  });
+  rt.on("response.done", () => {
+    finish();
+    rt.close();
+  });
+  rt.socket.addEventListener("close", () => {
+    if (!done && !streamError) {
+      fail(new Error("WebSocket connection was closed unexpectedly"));
+    }
+  });
+  rt.on("error", (error) => {
+    fail(error instanceof Error ? error : new Error(String(error)));
+    rt.close();
+  });
+
+  await opened;
+
+  rt.send({
+    type: "response.create",
+    response: {
+      modalities: ["text"],
+      instructions:
+        "You rewrite text exactly as requested. Return only the rewritten text without explanations, markdown fences, or surrounding quotes.",
+      input: [
+        {
+          type: "message",
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: `Order: ${instruction}\n\nSource:\n${source}`,
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  while (!done || queue.length > 0) {
+    if (streamError) {
+      throw streamError;
+    }
+    if (queue.length > 0) {
+      const next = queue.shift();
+      if (next !== undefined) {
+        yield next;
+      }
       continue;
     }
-    replacement += delta;
-    yield replacement;
+    await new Promise<void>((resolve) => {
+      wake = resolve;
+    });
+  }
+
+  if (streamError) {
+    throw streamError;
   }
 }

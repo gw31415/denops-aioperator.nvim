@@ -5,8 +5,7 @@
     "jsr:@core/unknownutil@4.3.0": "4.3.0",
     "jsr:@denops/core@*": "8.0.1",
     "jsr:@denops/core@8.0.1": "8.0.1",
-    "jsr:@openai/openai@*": "5.10.1",
-    "jsr:@openai/openai@5.10.1": "5.10.1",
+    "jsr:@openai/openai@6.25.0": "6.25.0",
     "npm:@langchain/core@*": "0.1.60_zod@3.23.4",
     "npm:@langchain/openai@*": "0.0.28_zod@3.23.4",
     "npm:@types/node@*": "24.0.15",
@@ -21,8 +20,8 @@
     "@denops/core@8.0.1": {
       "integrity": "699c70b07b2347febb96972c857fb8325ad8efa99936a0a8c0bb2be82a8b8f32"
     },
-    "@openai/openai@5.10.1": {
-      "integrity": "9cf9964c2045f76c4cb4b901733b45ddc5c48839081fe80da28ef1b41c402bd3"
+    "@openai/openai@6.25.0": {
+      "integrity": "0e1910d6773638a95246b41136a2375d3ef23f810c036ec2002d8eeb2236b821"
     }
   },
   "npm": {
@@ -440,7 +439,7 @@
     "dependencies": [
       "jsr:@core/unknownutil@4.3.0",
       "jsr:@denops/core@8.0.1",
-      "jsr:@openai/openai@5.10.1"
+      "jsr:@openai/openai@6.25.0"
     ]
   }
 }
