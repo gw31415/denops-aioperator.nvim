@@ -9,7 +9,7 @@ export async function* convert(
   instruction: string,
   source: string,
   openaiOpts: Record<string, unknown>,
-): AsyncGenerator<string> {
+): AsyncGenerator<{ type: "opened" } | { type: "delta"; text: string }> {
   const apiKey = typeof openaiOpts.api_key === "string"
     ? openaiOpts.api_key
     : "";
@@ -79,6 +79,7 @@ export async function* convert(
   });
 
   await opened;
+  yield { type: "opened" };
 
   rt.send({
     type: "response.create",
@@ -113,7 +114,7 @@ export async function* convert(
         queueHead = 0;
       }
       if (next !== undefined) {
-        yield next;
+        yield { type: "delta", text: next };
       }
       continue;
     }

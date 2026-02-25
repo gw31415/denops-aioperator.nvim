@@ -49,7 +49,17 @@ export function main(denops: Denops) {
 
       try {
         // Stream text deltas incrementally with short batching to reduce RPC overhead.
-        for await (const delta of stream) {
+        for await (const event of stream) {
+          if (event.type === "opened") {
+            await denops.call(
+              "denops#callback#call",
+              responseWriterFuncId,
+              { type: "opened" },
+            );
+            continue;
+          }
+
+          const delta = event.text;
           pending += delta;
 
           const now = performance.now();

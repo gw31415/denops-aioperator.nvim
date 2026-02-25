@@ -5,14 +5,20 @@ local function create_response_writer(opts)
 		bufnr = vim.api.nvim_get_current_buf(),
 		winnr = vim.api.nvim_get_current_win(),
 		scroll = true,
+		on_open = function() end,
+		anchor = nil,
 	}, opts or {})
 	local bufnr           = opts.bufnr
 	local winnr           = opts.winnr
 	local scroll          = opts.scroll
+	local on_open         = opts.on_open
 
 	local _, lnum, col, _ = unpack(vim.fn.getcharpos '.' or { 0, 0, 0, 0 })
-	-- zero-indexed lnum
-	local line_start      = lnum - 1
+	if type(opts.anchor) == 'table' then
+		lnum = tonumber(opts.anchor[1] or lnum) or lnum
+		col = tonumber(opts.anchor[2] or col) or col
+	end
+	local line_start      = lnum - 1 -- zero-indexed lnum
 	local line_col        = col - 1
 
 	local nsnum           = vim.api.nvim_create_namespace 'aioperator'
@@ -66,6 +72,10 @@ local function create_response_writer(opts)
 
 		if event.type == 'delta' then
 			insert_text(type(event.text) == 'string' and event.text or '')
+		elseif event.type == 'opened' then
+			set_modifiable(true)
+			on_open()
+			set_modifiable(false)
 		elseif event.type == 'done' then
 			set_modifiable(false)
 		end
@@ -115,28 +125,36 @@ function _G._aioperator_opfunc(type)
 	-- Exit if no input
 	if instruction == '' then return end
 
+	local source
+	if type == 'line' then
+		source = table.concat(vim.api.nvim_buf_get_lines(0, line1 - 1, line2, true), '\n') .. '\n'
+	else
+		source = table.concat(vim.api.nvim_buf_get_text(0, line1 - 1, col1 - 1, line2 - 1, col2, {}), '\n')
+	end
+
 	-- Note the value of virtualedit
 	local ve = vim.api.nvim_get_option_value('ve', {})
 	vim.api.nvim_set_option_value('ve', 'onemore', {}) -- To support deletion up to the end of the line.
 
-	if type == 'line' then
-		vim.cmd "noau norm! '[V']c"
-	else
-		vim.cmd 'noau norm! `[v`]d'
-	end
-
-	-- Change to normal-mode
-	vim.api.nvim_feedkeys(
-		vim.api.nvim_replace_termcodes('<esc>', true, false, true),
-		'm', true
-	)
-
-	local source = vim.fn.getreg '"'
-
 	local opts = vim.api.nvim_get_var 'aioperator_opts'
 
 	local ma = vim.api.nvim_get_option_value('modifiable', {})
-	local responseWriterId = vim.fn['denops#callback#register'](create_response_writer(opts))
+	local writerOpts = vim.tbl_extend('force', opts, {
+		anchor = { line1, col1 },
+		on_open = function()
+			if type == 'line' then
+				vim.cmd "noau norm! '[V']c"
+			else
+				vim.cmd 'noau norm! `[v`]d'
+			end
+			-- Change to normal-mode
+			vim.api.nvim_feedkeys(
+				vim.api.nvim_replace_termcodes('<esc>', true, false, true),
+				'm', true
+			)
+		end,
+	})
+	local responseWriterId = vim.fn['denops#callback#register'](create_response_writer(writerOpts))
 
 	local cursorIsEOF = vim.fn.line '.' == vim.fn.line '$'
 	if cursorIsEOF then
