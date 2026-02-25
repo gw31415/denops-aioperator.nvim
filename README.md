@@ -45,6 +45,7 @@ See `:help operator` for more information on how to use the operator.
 - `g:aioperator_opts.openai` supports only:
   - `api_key`
   - `model`
+  - `seed` (optional, integer)
 - Legacy keys are removed and not supported:
   - `apiKey`, `baseURL`, `organization`, `project`, `temperature`, and other
     Chat Completions options
