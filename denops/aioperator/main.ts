@@ -2,7 +2,7 @@ import { isString } from "@core/unknownutil";
 import type { Denops } from "@denops/core";
 import { convert } from "./converter.ts";
 
-export const DEFAULT_MODEL = "gpt-realtime-mini";
+export const DEFAULT_MODEL = "gpt-4o-mini";
 const FLUSH_INTERVAL_MS = 16;
 const MAX_BATCH_CHARS = 512;
 
