@@ -58,9 +58,34 @@ local function create_response_writer(opts)
 		vim.api.nvim_buf_call(bufnr, vim.cmd.undojoin)
 		vim.api.nvim_buf_set_text(bufnr, row, colnum, row, colnum, lines)
 
-		if scroll and #lines > 1 and bufnr == vim.fn.winbufnr(winnr) then
-			vim.api.nvim_win_call(winnr, function() vim.cmd 'noau norm! zb' end)
+		if not (scroll and bufnr == vim.fn.winbufnr(winnr)) then
+			return
 		end
+
+		-- Follow the insertion point: move the cursor to the end of the
+		-- newly inserted text and scroll smoothly — only by the minimum
+		-- number of lines needed to keep the cursor visible.
+		vim.api.nvim_win_call(winnr, function()
+			local mpos = vim.api.nvim_buf_get_extmark_by_id(bufnr, nsnum, extmarkid, {})
+			if not mpos or #mpos < 2 then
+				return
+			end
+			local new_lnum = mpos[1] + 1
+			local new_col  = mpos[2]
+
+			local view    = vim.fn.winsaveview()
+			local botline = vim.fn.line('w$')
+
+			-- Advance the viewport only when the cursor falls below the
+			-- last visible line, and only by the exact delta — no jumps.
+			if new_lnum > botline then
+				view.topline = math.min(view.topline + (new_lnum - botline), vim.fn.line('$'))
+			end
+			view.lnum     = new_lnum
+			view.col      = new_col
+			view.curswant = new_col
+			vim.fn.winrestview(view)
+		end)
 	end
 
 	return function(event)
@@ -156,21 +181,41 @@ function _G._aioperator_opfunc(type)
 	})
 	local responseWriterId = vim.fn['denops#callback#register'](create_response_writer(writerOpts))
 
+	-- Save the last-change marks: adding an extra line at EOF overwrites
+	-- '[ / '] , which on_open() relies on to delete the original text.
+	local mark_start = vim.fn.getpos("'[")
+	local mark_end   = vim.fn.getpos("']")
+
 	local cursorIsEOF = vim.fn.line '.' == vim.fn.line '$'
+	local eofExtmarkId
 	if cursorIsEOF then
-		-- If it is the last line, move the cursor to the new empty line.
+		-- If the cursor is on the last line, add a new empty line below
+		-- so that on_open()'s change operation has a line to land on.
 		vim.api.nvim_set_option_value('modifiable', true, {})
 		vim.cmd [[undoj | exe "noau norm! o\<ESC>"]]
+		-- Track the extra line with an extmark (left-gravity) so that
+		-- finally() can delete it by position, not by cursor.
+		local ns = vim.api.nvim_create_namespace 'aioperator'
+		eofExtmarkId = vim.api.nvim_buf_set_extmark(0, ns, vim.fn.line('.') - 1, 0, {
+			right_gravity = false,
+		})
 	end
 
+	-- Restore the marks that cursorIsEOF handling may have overwritten.
+	vim.fn.setpos("'[", mark_start)
+	vim.fn.setpos("']", mark_end)
+
 	local function finally()
-		if cursorIsEOF then
-			vim.api.nvim_set_option_value('modifiable', true, {})
-			vim.cmd.undojoin()
-			vim.api.nvim_feedkeys(
-				vim.api.nvim_replace_termcodes('dd', true, false, true),
-				'n', true
-			)
+		if eofExtmarkId then
+			local ns  = vim.api.nvim_create_namespace 'aioperator'
+			local pos = vim.api.nvim_buf_get_extmark_by_id(0, ns, eofExtmarkId, {})
+			if pos and pos[1] then
+				local del_row = pos[1]
+				vim.api.nvim_set_option_value('modifiable', true, {})
+				vim.cmd.undojoin()
+				vim.api.nvim_buf_set_lines(0, del_row, del_row + 1, false, {})
+			end
+			vim.api.nvim_buf_del_extmark(0, ns, eofExtmarkId)
 		end
 		vim.api.nvim_set_option_value('modifiable', ma, {})
 		vim.api.nvim_set_option_value('ve', ve, {})
