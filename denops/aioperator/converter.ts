@@ -1,5 +1,6 @@
 import OpenAI from "@openai/openai";
 import { DEFAULT_MODEL } from "./main.ts";
+import { extractBetweenTags } from "./parser.ts";
 
 function normalizeSeed(
   seed: unknown,
@@ -114,56 +115,20 @@ export async function* convert(
 
   yield { type: "opened" };
 
-  // Tag-extraction streaming state machine.
-  let parseBuffer = "";
-  let seenOpenTag = false;
-  let seenCloseTag = false;
-  const openTailKeep = tags.open.length - 1;
-  const closeTailKeep = tags.close.length - 1;
-
-  for await (const chunk of stream) {
-    const delta = chunk.choices?.[0]?.delta?.content;
-    if (typeof delta !== "string" || delta.length === 0) {
-      continue;
-    }
-
-    if (seenCloseTag) {
-      continue;
-    }
-
-    parseBuffer += delta;
-
-    if (!seenOpenTag) {
-      const openIdx = parseBuffer.indexOf(tags.open);
-      if (openIdx === -1) {
-        if (parseBuffer.length > openTailKeep) {
-          parseBuffer = parseBuffer.slice(-openTailKeep);
-        }
-        continue;
+  // Derive a plain text-delta stream from the SDK chunks and delegate the
+  // tag extraction (and leading-newline stripping) to the pure parser.
+  async function* deltas(): AsyncGenerator<string> {
+    for await (const chunk of stream) {
+      const content = chunk.choices?.[0]?.delta?.content;
+      if (typeof content === "string" && content.length > 0) {
+        yield content;
       }
-      seenOpenTag = true;
-      parseBuffer = parseBuffer.slice(openIdx + tags.open.length);
-    }
-
-    const closeIdx = parseBuffer.indexOf(tags.close);
-    if (closeIdx !== -1) {
-      const out = parseBuffer.slice(0, closeIdx);
-      parseBuffer = "";
-      seenCloseTag = true;
-      if (out.length > 0) {
-        yield { type: "delta", text: out };
-      }
-      break;
-    }
-
-    if (parseBuffer.length > closeTailKeep) {
-      const flushLen = parseBuffer.length - closeTailKeep;
-      yield { type: "delta", text: parseBuffer.slice(0, flushLen) };
-      parseBuffer = parseBuffer.slice(flushLen);
     }
   }
 
-  if (!seenCloseTag) {
-    throw new Error("Failed to extract transformed text from model output");
+  for await (
+    const text of extractBetweenTags(deltas(), tags.open, tags.close)
+  ) {
+    yield { type: "delta", text };
   }
 }
